@@ -1,4 +1,5 @@
 use crate::component::*;
+use crate::core;
 use crate::kw;
 use crate::parser::{Cursor, Lookahead1, Parse, Parser, Peek, Result};
 use crate::token::{Id, Index, LParen, NameAnnotation, Span};
@@ -58,8 +59,8 @@ pub enum CoreFuncKind<'a> {
     BackpressureDec,
     TaskReturn(CanonTaskReturn<'a>),
     TaskCancel,
-    ContextGet(u32),
-    ContextSet(u32),
+    ContextGet(CanonContextGet<'a>),
+    ContextSet(CanonContextSet<'a>),
     ThreadYield(CanonThreadYield),
     SubtaskDrop,
     SubtaskCancel(CanonSubtaskCancel),
@@ -138,12 +139,8 @@ impl<'a> CoreFuncKind<'a> {
             parser.parse::<kw::task_cancel>()?;
             Ok(CoreFuncKind::TaskCancel)
         } else if l.peek::<kw::context_get>()? {
-            parser.parse::<kw::context_get>()?;
-            parser.parse::<kw::i32>()?;
             Ok(CoreFuncKind::ContextGet(parser.parse()?))
         } else if l.peek::<kw::context_set>()? {
-            parser.parse::<kw::context_set>()?;
-            parser.parse::<kw::i32>()?;
             Ok(CoreFuncKind::ContextSet(parser.parse()?))
         } else if l.peek::<kw::thread_yield>()? {
             Ok(CoreFuncKind::ThreadYield(parser.parse()?))
@@ -579,6 +576,46 @@ impl<'a> Parse<'a> for CanonTaskReturn<'a> {
                 None
             },
             opts: parser.parse()?,
+        })
+    }
+}
+
+/// Information relating to the `context.get` intrinsic.
+#[derive(Debug)]
+pub struct CanonContextGet<'a> {
+    /// The value type of the stored context slot. Only `i32` or `i64` are
+    /// currently accepted by the spec, but this may be relaxed.
+    pub ty: core::ValType<'a>,
+    /// The slot index within task-local storage.
+    pub i: u32,
+}
+
+impl<'a> Parse<'a> for CanonContextGet<'a> {
+    fn parse(parser: Parser<'a>) -> Result<Self> {
+        parser.parse::<kw::context_get>()?;
+        Ok(Self {
+            ty: parser.parse()?,
+            i: parser.parse()?,
+        })
+    }
+}
+
+/// Information relating to the `context.set` intrinsic.
+#[derive(Debug)]
+pub struct CanonContextSet<'a> {
+    /// The value type of the stored context slot. Only `i32` or `i64` are
+    /// currently accepted by the spec, but this may be relaxed.
+    pub ty: core::ValType<'a>,
+    /// The slot index within task-local storage.
+    pub i: u32,
+}
+
+impl<'a> Parse<'a> for CanonContextSet<'a> {
+    fn parse(parser: Parser<'a>) -> Result<Self> {
+        parser.parse::<kw::context_set>()?;
+        Ok(Self {
+            ty: parser.parse()?,
+            i: parser.parse()?,
         })
     }
 }

@@ -344,29 +344,31 @@
   (component
     (core func (canon context.set i32 100)))
   "immediate must be zero: 100")
-(assert_malformed
-  (component quote
-    "(core func (canon context.get i64 100))")
-  "expected keyword `i32`")
-(assert_malformed
-  (component quote
-    "(core func (canon context.set i64 100))")
-  "expected keyword `i32`")
+;; `i64` slot types are accepted by both the text parser and the binary
+;; decoder, but the immediate must still be zero.
+;; TODO: gate behind feature flag
+(assert_invalid
+  (component
+    (core func (canon context.get i64 100)))
+  "immediate must be zero: 100")
+(assert_invalid
+  (component
+    (core func (canon context.set i64 100)))
+  "immediate must be zero: 100")
 
-(assert_malformed
-  (component binary
-    "\00asm" "\0d\00\01\00" ;; component header
-    "\08\04"                ;; canonicals section, 4 bytes
-    "\01"                   ;; 1 count
-    "\0a\7e\00")            ;; context.get i64 0
-  "invalid leading byte (0x7e) for context.get")
-(assert_malformed
-  (component binary
-    "\00asm" "\0d\00\01\00" ;; component header
-    "\08\04"                ;; canonicals section, 4 bytes
-    "\01"                   ;; 1 count
-    "\0b\7e\00")            ;; context.set i64 0
-  "invalid leading byte (0x7e) for context.set")
+;; Binary form: `context.get`/`context.set` with a leading `0x7e` byte is
+;; decoded as `i64`.
+;; TODO: gate behind feature flag
+(component binary
+  "\00asm" "\0d\00\01\00" ;; component header
+  "\08\04"                ;; canonicals section, 4 bytes
+  "\01"                   ;; 1 count
+  "\0a\7e\00")            ;; context.get i64 0
+(component binary
+  "\00asm" "\0d\00\01\00" ;; component header
+  "\08\04"                ;; canonicals section, 4 bytes
+  "\01"                   ;; 1 count
+  "\0b\7e\00")            ;; context.set i64 0
 
 ;; different forms of canonical intrinsics
 
@@ -425,6 +427,10 @@
   (canon context.get i32 0 (core func))
   (core func (canon context.set i32 0))
   (canon context.set i32 0 (core func))
+  (core func (canon context.get i64 0))
+  (canon context.get i64 0 (core func))
+  (core func (canon context.set i64 0))
+  (canon context.set i64 0 (core func))
 
   (core func (canon thread.yield))
   (canon thread.yield (core func))

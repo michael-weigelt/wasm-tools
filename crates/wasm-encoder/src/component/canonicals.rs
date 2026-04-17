@@ -1,4 +1,4 @@
-use crate::{ComponentSection, ComponentSectionId, ComponentValType, Encode, encode_section};
+use crate::{ComponentSection, ComponentSectionId, ComponentValType, Encode, ValType, encode_section};
 use alloc::vec::Vec;
 
 /// Represents options for canonical function definitions.
@@ -235,18 +235,22 @@ impl CanonicalFunctionSection {
     }
 
     /// Defines a new `context.get` intrinsic of the ith slot.
-    pub fn context_get(&mut self, i: u32) -> &mut Self {
+    ///
+    /// `ty` must be `ValType::I32` or `ValType::I64`.
+    pub fn context_get(&mut self, ty: ValType, i: u32) -> &mut Self {
         self.bytes.push(0x0a);
-        self.bytes.push(0x7f);
+        ty.encode(&mut self.bytes);
         i.encode(&mut self.bytes);
         self.num_added += 1;
         self
     }
 
     /// Defines a new `context.set` intrinsic of the ith slot.
-    pub fn context_set(&mut self, i: u32) -> &mut Self {
+    ///
+    /// `ty` must be `ValType::I32` or `ValType::I64`.
+    pub fn context_set(&mut self, ty: ValType, i: u32) -> &mut Self {
         self.bytes.push(0x0b);
-        self.bytes.push(0x7f);
+        ty.encode(&mut self.bytes);
         i.encode(&mut self.bytes);
         self.num_added += 1;
         self

@@ -1,6 +1,6 @@
 use crate::limits::MAX_WASM_CANONICAL_OPTIONS;
-use crate::prelude::*;
 use crate::{BinaryReader, ComponentValType, FromReader, Result, SectionLimited};
+use crate::{ValType, prelude::*};
 
 /// Represents options for component functions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -108,9 +108,19 @@ pub enum CanonicalFunction {
     /// A function to acknowledge cancellation of the current task.
     TaskCancel,
     /// A `context.get` intrinsic for the `i`th slot of task-local storage.
-    ContextGet(u32),
+    ContextGet {
+        /// The value type of the stored context slot. Must be `i32` or `i64`.
+        ty: ValType,
+        /// The slot index.
+        i: u32,
+    },
     /// A `context.set` intrinsic for the `i`th slot of task-local storage.
-    ContextSet(u32),
+    ContextSet {
+        /// The value type of the stored context slot. Must be `i32` or `i64`.
+        ty: ValType,
+        /// The slot index.
+        i: u32,
+    },
     /// A function which yields control to the host so that other tasks are able
     /// to make progress, if any.
     ThreadYield {
@@ -337,14 +347,28 @@ impl<'a> FromReader<'a> for CanonicalFunction {
                 result: crate::read_resultlist(reader)?,
                 options: read_opts(reader)?,
             },
-            0x0a => match reader.read_u8()? {
-                0x7f => CanonicalFunction::ContextGet(reader.read_var_u32()?),
-                x => return reader.invalid_leading_byte(x, "context.get intrinsic type"),
-            },
-            0x0b => match reader.read_u8()? {
-                0x7f => CanonicalFunction::ContextSet(reader.read_var_u32()?),
-                x => return reader.invalid_leading_byte(x, "context.set intrinsic type"),
-            },
+            0x0a => {
+                let ty = match reader.read_u8()? {
+                    0x7f => ValType::I32,
+                    0x7e => ValType::I64,
+                    x => return reader.invalid_leading_byte(x, "context.get intrinsic type"),
+                };
+                CanonicalFunction::ContextGet {
+                    ty,
+                    i: reader.read_var_u32()?,
+                }
+            }
+            0x0b => {
+                let ty = match reader.read_u8()? {
+                    0x7f => ValType::I32,
+                    0x7e => ValType::I64,
+                    x => return reader.invalid_leading_byte(x, "context.set intrinsic type"),
+                };
+                CanonicalFunction::ContextSet {
+                    ty,
+                    i: reader.read_var_u32()?,
+                }
+            }
             0x0c => CanonicalFunction::ThreadYield {
                 cancellable: reader.read()?,
             },

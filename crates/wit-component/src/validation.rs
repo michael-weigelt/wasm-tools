@@ -276,9 +276,13 @@ pub enum Import {
     ExportedTaskCancel,
 
     /// The `context.get` intrinsic for the nth slot of storage.
-    ContextGet(u32),
+    ///
+    /// `ty` is the value type of the slot (currently only `i32` or `i64`).
+    ContextGet(ValType, u32),
     /// The `context.set` intrinsic for the nth slot of storage.
-    ContextSet(u32),
+    ///
+    /// `ty` is the value type of the slot (currently only `i32` or `i64`).
+    ContextSet(ValType, u32),
 
     /// A `canon backpressure.inc` intrinsic.
     BackpressureInc,
@@ -686,14 +690,18 @@ impl ImportMap {
             }
 
             if let Some(i) = names.context_get(name) {
-                let expected = FuncType::new([], [ValType::I32]);
+                // TODO: gate behind feature flag
+                let slot_ty = context_slot_type(name, ty.results())?;
+                let expected = FuncType::new([], [slot_ty]);
                 validate_func_sig(name, &expected, ty)?;
-                return Ok(Import::ContextGet(i));
+                return Ok(Import::ContextGet(slot_ty, i));
             }
+
             if let Some(i) = names.context_set(name) {
-                let expected = FuncType::new([ValType::I32], []);
+                let slot_ty = context_slot_type(name, ty.params())?;
+                let expected = FuncType::new([slot_ty], []);
                 validate_func_sig(name, &expected, ty)?;
-                return Ok(Import::ContextSet(i));
+                return Ok(Import::ContextSet(slot_ty, i));
             }
             if names.thread_index(name) {
                 let expected = FuncType::new([], [ValType::I32]);
@@ -2673,6 +2681,20 @@ fn validate_post_return(
         &wasm_sig_to_func_type(sig),
         ty,
     )
+}
+
+/// Determine the value type of a `context.get` / `context.set` slot from the
+/// imported core function's signature. The spec currently only permits `i32`
+/// or `i64`; any other type is reported as an error here so the subsequent
+/// full-signature check can produce a precise diagnostic.
+fn context_slot_type(name: &str, types: &[ValType]) -> Result<ValType> {
+    match types {
+        [ty @ (ValType::I32 | ValType::I64)] => Ok(*ty),
+        _ => bail!(
+            "type mismatch for function `{name}`: `context.get`/`context.set` \
+             require an `i32` or `i64` slot type"
+        ),
+    }
 }
 
 fn validate_func_sig(name: &str, expected: &FuncType, ty: &wasmparser::FuncType) -> Result<()> {

@@ -977,15 +977,15 @@ impl Printer<'_, '_> {
                 CanonicalFunction::TaskCancel => {
                     self.print_intrinsic(state, "canon task.cancel", &|_, _| Ok(()))?;
                 }
-                CanonicalFunction::ContextGet(i) => {
+                CanonicalFunction::ContextGet { ty, i } => {
                     self.print_intrinsic(state, "canon context.get", &|me, _state| {
-                        write!(me.result, " i32 {i}")?;
+                        write!(me.result, " {ty} {i}")?;
                         Ok(())
                     })?;
                 }
-                CanonicalFunction::ContextSet(i) => {
+                CanonicalFunction::ContextSet { ty, i } => {
                     self.print_intrinsic(state, "canon context.set", &|me, _state| {
-                        write!(me.result, " i32 {i}")?;
+                        write!(me.result, " {ty} {i}")?;
                         Ok(())
                     })?;
                 }

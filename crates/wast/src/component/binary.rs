@@ -392,13 +392,13 @@ impl<'a> Encoder<'a> {
                     self.core_func_names.push(name);
                     self.funcs.task_cancel();
                 }
-                CoreFuncKind::ContextGet(i) => {
+                CoreFuncKind::ContextGet(info) => {
                     self.core_func_names.push(name);
-                    self.funcs.context_get(*i);
+                    self.funcs.context_get(info.ty.into(), info.i);
                 }
-                CoreFuncKind::ContextSet(i) => {
+                CoreFuncKind::ContextSet(info) => {
                     self.core_func_names.push(name);
-                    self.funcs.context_set(*i);
+                    self.funcs.context_set(info.ty.into(), info.i);
                 }
                 CoreFuncKind::ThreadYield(info) => {
                     self.core_func_names.push(name);

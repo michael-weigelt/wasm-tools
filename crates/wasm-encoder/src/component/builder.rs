@@ -4,6 +4,18 @@ use alloc::format;
 use alloc::vec::Vec;
 use core::mem;
 
+/// Short textual name for a `context.get` / `context.set` slot type used when
+/// registering a debug name for the emitted core function. The spec currently
+/// restricts the slot type to `i32` or `i64`; any other value is not expected
+/// and falls back to a generic marker.
+fn context_slot_ty_name(ty: ValType) -> &'static str {
+    match ty {
+        ValType::I32 => "i32",
+        ValType::I64 => "i64",
+        _ => "<invalid>",
+    }
+}
+
 /// Convenience type to build a component incrementally and automatically keep
 /// track of index spaces.
 ///
@@ -507,15 +519,21 @@ impl ComponentBuilder {
     }
 
     /// Declares a new `context.get` intrinsic.
-    pub fn context_get(&mut self, i: u32) -> u32 {
-        self.canonical_functions().context_get(i);
-        self.core_funcs.add(Some(&format!("context.get {i}")))
+    ///
+    /// `ty` must be `ValType::I32` or `ValType::I64`.
+    pub fn context_get(&mut self, ty: ValType, i: u32) -> u32 {
+        self.canonical_functions().context_get(ty, i);
+        self.core_funcs
+            .add(Some(&format!("context.get {} {i}", context_slot_ty_name(ty))))
     }
 
     /// Declares a new `context.set` intrinsic.
-    pub fn context_set(&mut self, i: u32) -> u32 {
-        self.canonical_functions().context_set(i);
-        self.core_funcs.add(Some(&format!("context.set {i}")))
+    ///
+    /// `ty` must be `ValType::I32` or `ValType::I64`.
+    pub fn context_set(&mut self, ty: ValType, i: u32) -> u32 {
+        self.canonical_functions().context_set(ty, i);
+        self.core_funcs
+            .add(Some(&format!("context.set {} {i}", context_slot_ty_name(ty))))
     }
 
     /// Declares a new `thread.yield` intrinsic.
