@@ -634,6 +634,7 @@ impl ImportMap {
             }
 
             if let Some(info) = names.waitable_set_wait(name) {
+                //                                   [ValType::I32, Addrtype]
                 let expected = FuncType::new([ValType::I32; 2], [ValType::I32]);
                 validate_func_sig(name, &expected, ty)?;
                 return Ok(Import::WaitableSetWait {
@@ -642,6 +643,7 @@ impl ImportMap {
             }
 
             if let Some(info) = names.waitable_set_poll(name) {
+                //                                   [ValType::I32, Addrtype
                 let expected = FuncType::new([ValType::I32; 2], [ValType::I32]);
                 validate_func_sig(name, &expected, ty)?;
                 return Ok(Import::WaitableSetPoll {
