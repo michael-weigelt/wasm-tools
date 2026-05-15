@@ -1,3 +1,5 @@
+;; RUN: wast --assert default --snapshot tests/snapshots % -f=-cm-async,-cm64
+
 ;; waitable-set.wait
 
 (component
